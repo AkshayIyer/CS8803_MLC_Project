@@ -7,11 +7,12 @@ from matdeeplearn.models.base_model import BaseModel
 from torch_geometric.utils import add_remaining_self_loops
 from torch_geometric.nn.conv import MessagePassing
 from torch_scatter import scatter_add
+import torch_geometric.nn
 from torch.nn import Linear
-import torch.ones as ones
-import torch.stack as stack
-import torch.matmul as matmul
-import torch.sigmoid as sigmoid
+from torch import ones
+from torch import stack
+from torch import matmul
+from torch import sigmoid
 import torch.nn.functional as F
 
 def gcn_norm(edge_index, edge_weight=None, num_nodes=None, improved=False,
@@ -73,13 +74,16 @@ class DAGNN(BaseModel):
         dim2 = 10,
         dropout_rate = 0.0,
         gc_count = 3,
+        pool="global_mean_pool",
         **kwargs
     ):
         super(DAGNN, self).__init__()
         self.lin1 = Linear(data.num_features, dim1)
         self.lin2 = Linear(dim1, dim2)
         self.prop = Prop(dim2, gc_count)
-
+        self.lin3 = Linear(dim2, 1)
+        
+        self.pool = pool
         self.dropout_rate = dropout_rate
 
         # Determine output dimension length
@@ -95,10 +99,15 @@ class DAGNN(BaseModel):
         self.prop.reset_parameters()
 
     def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+        x, edge_index = data.x.float(), data.edge_index
         x = F.dropout(x, p=self.dropout_rate, training=self.training)
         x = F.relu(self.lin1(x))
         x = F.dropout(x, p=self.dropout_rate, training=self.training)
         x = self.lin2(x)
         x = self.prop(x, edge_index)
-        return x
+        x = self.lin3(x)
+        x = getattr(torch_geometric.nn, self.pool)(x, data.batch)
+        if x.shape[1] == 1:
+            return x.view(-1)
+        else:
+            return x
