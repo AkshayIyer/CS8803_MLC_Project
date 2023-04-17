@@ -4,8 +4,10 @@ import csv
 import shutil
 import yaml
 import math
+import json
 import numpy as np
-from datetime import datetime
+import datetime
+import pandas as pd
 
 import torch
 from torch.optim import AdamW
@@ -36,6 +38,18 @@ class Trainer(object):
         self.config = config
         self.device = self._get_device()
         self.dataset = DataWrapper(**self.config['dataset'])
+
+        now = datetime.datetime.now()
+        now = now.strftime("%Y-%m-%d_%H-%M-%S")
+        currday, currtime = now.split('_')
+
+        if self.config['save_files']:
+            if not os.path.exists('saved_models/' + now + '/'):
+                os.makedirs('saved_models/' + now + '/')
+            self.save_path = 'saved_models/' + now + '/'
+
+            with open(self.save_path + 'config.json', 'w') as fp:
+                json.dump(self.config, fp)
 
     def _get_device(self):
         if torch.cuda.is_available() and self.config['gpu'] != 'cpu':
@@ -80,7 +94,18 @@ class Trainer(object):
         valid_n_iter = 0
         best_valid_loss = np.inf
 
+        list_train_loss = []
+        list_train_y_loss = []
+        list_train_noise_loss = []
+        list_valid_loss = []
+        list_valid_y_loss = []
+        list_valid_noise_loss = []
+
         for epoch_counter in range(self.config['epochs']):
+            train_loss_y = 0.
+            train_loss_noise = 0.
+            train_loss = 0.
+
             for bn, data in enumerate(train_loader):                
                 adjust_learning_rate(optimizer, epoch_counter + bn / len(train_loader), self.config)
 
@@ -91,30 +116,60 @@ class Trainer(object):
                 loss.backward()
                 optimizer.step()
 
-                if n_iter % self.config['log_every_n_steps'] == 0:
-                    log_str = 'Epoch: {:04d}, Train loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f}'.format(
-                        epoch_counter, loss.item(), loss_y.item(), loss_noise.item()
-                    )
-                    print(log_str)
-                    torch.cuda.empty_cache()
-                    gc.collect() # free memory
+                train_loss_y += loss_y.item()
+                train_loss_noise += loss_noise.item()
+                train_loss += loss.item()
+
+                # if n_iter % self.config['log_every_n_steps'] == 0:
+                #     log_str = 'Epoch: {:04d}, Train loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f}'.format(
+                #         epoch_counter, loss.item(), loss_y.item(), loss_noise.item()
+                #     )
+                #     print(log_str)
+                #     torch.cuda.empty_cache()
+                #     gc.collect() # free memory
 
                 n_iter += 1
+            
+            train_loss_y /= (bn+1)
+            train_loss_noise /= (bn+1)
+            train_loss /= (bn+1)
 
             gc.collect() # free memory
             torch.cuda.empty_cache()
 
             # validate the model 
             valid_loss, valid_loss_y, valid_loss_noise = self._validate(model, valid_loader)
-            log_str = 'Epoch: {:04d}, Valid loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f}'.format(
-                        epoch_counter, valid_loss, valid_loss_y, valid_loss_noise
+            log_str = 'Epoch: {:04d}, Train loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f} || Valid loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f}'.format(
+                        epoch_counter, train_loss, train_loss_y, train_loss_noise, valid_loss, valid_loss_y, valid_loss_noise
                     )
             print(log_str)
 
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
+                if self.config['save_files']:
+                    torch.save(model.state_dict(), os.path.join(self.save_path, 'model.pth'))
 
             valid_n_iter += 1
+
+            # append losses to lists
+            list_train_loss.append(train_loss)
+            list_train_y_loss.append(train_loss_y)
+            list_train_noise_loss.append(train_loss_noise)
+            list_valid_loss.append(valid_loss)
+            list_valid_y_loss.append(valid_loss_y)
+            list_valid_noise_loss.append(valid_loss_noise)
+
+        # save losses to csv
+        if self.config['save_files']:
+            df = pd.DataFrame({
+                'train_loss': list_train_loss,
+                'train_y_loss': list_train_y_loss,
+                'train_noise_loss': list_train_noise_loss,
+                'valid_loss': list_valid_loss,
+                'valid_y_loss': list_valid_y_loss,
+                'valid_noise_loss': list_valid_noise_loss,
+            })
+            df.to_csv(os.path.join(self.save_path, 'losses.csv'), index=False)
 
         return model
 
@@ -141,6 +196,13 @@ class Trainer(object):
 
 if __name__ == "__main__":
     config = yaml.load(open("configs/nn_config.yml", "r"), Loader=yaml.FullLoader)
+
+    num_layers = [4, 6, 8, 10, 12]
+    num_heads = [2, 4, 6, 8, 10]
+    cutoff_upper = [4, 6, 8, 10, 12, 16]
+
+    config['save_files'] = False
+
     print(config)
 
     trainer = Trainer(config)

@@ -2,11 +2,12 @@ gpu: 'cuda:0'
 lr: 2e-4
 min_lr: 1e-7
 weight_decay: 0.0
-epochs: 500
+epochs: 5
 warmup_epochs: 0.7
 patience_epochs: 0.3
 load_model: None
 log_every_n_steps: 50
+save_files: True
 
 model: 
   # name: "EGNN"
