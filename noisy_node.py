@@ -53,6 +53,7 @@ class Trainer(object):
             shutil.copy('./config_pretrain.yaml', os.path.join(ckpt_dir, 'config_pretrain.yaml'))
 
     def loss_fn(self, model, data):
+        data = data.to(self.device)
         pred_y, pred_noise = model(data.x, data.pos, data.batch)
 
         loss_y = F.mse_loss(pred_y, data.y)
@@ -91,7 +92,10 @@ class Trainer(object):
                 optimizer.step()
 
                 if n_iter % self.config['log_every_n_steps'] == 0:
-                    print(epoch_counter, bn, 'loss', loss.item(), 'loss_y', loss_y.item(), 'loss_noise', loss_noise.item())
+                    log_str = 'Epoch: {:04d}, Train loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f}'.format(
+                        epoch_counter, loss.item(), loss_y.item(), loss_noise.item()
+                    )
+                    print(log_str)
                     torch.cuda.empty_cache()
                     gc.collect() # free memory
 
@@ -102,7 +106,10 @@ class Trainer(object):
 
             # validate the model 
             valid_loss, valid_loss_y, valid_loss_noise = self._validate(model, valid_loader)
-            print('Validation', epoch_counter, 'valid loss', valid_loss, 'valid loss_y', valid_loss_y, 'valid loss_noise', valid_loss_noise)
+            log_str = 'Epoch: {:04d}, Valid loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f}'.format(
+                        epoch_counter, valid_loss, valid_loss_y, valid_loss_noise
+                    )
+            print(log_str)
 
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
