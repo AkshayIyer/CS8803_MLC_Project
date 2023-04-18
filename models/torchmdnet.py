@@ -70,6 +70,7 @@ class TorchMD_ET(nn.Module):
         max_atom_type=100,
         # max_chirality_type=100,
         max_num_neighbors=32,
+        pbc=False,
         # marginal_prob_std=None, 
         **kwargs
     ):
@@ -101,6 +102,7 @@ class TorchMD_ET(nn.Module):
         self.distance_influence = distance_influence
         self.cutoff_lower = cutoff_lower
         self.cutoff_upper = cutoff_upper
+        self.pbc = pbc
 
         self.max_atom_type = max_atom_type
         self.type_embedding = nn.Embedding(self.max_atom_type, hidden_channels)
@@ -113,6 +115,7 @@ class TorchMD_ET(nn.Module):
             max_num_neighbors=max_num_neighbors,
             return_vecs=True,
             loop=True,
+            pbc=pbc,
         )
         self.distance_expansion = rbf_class_mapping[rbf_type](
             cutoff_lower, cutoff_upper, num_rbf, trainable_rbf
@@ -185,14 +188,18 @@ class TorchMD_ET(nn.Module):
                 z: Tensor,
                 pos: Tensor,
                 batch: Tensor,
+                data,
                 t: Optional[Tensor] = None,
                 q: Optional[Tensor] = None,
                 s: Optional[Tensor] = None
                 ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
 
         x = self.type_embedding(z)
-
-        edge_index, edge_weight, edge_vec = self.distance(pos, batch)
+        if self.pbc:
+            edge_index, edge_weight, edge_vec = self.distance(pos, batch, data=data)
+        else:
+            edge_index, edge_weight, edge_vec = self.distance(pos, batch)
+            
         assert (
             edge_vec is not None
         ), "Distance module did not return directional information"

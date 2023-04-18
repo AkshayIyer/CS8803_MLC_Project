@@ -2,7 +2,7 @@ gpu: 'cuda:0'
 lr: 2e-4
 min_lr: 1e-7
 weight_decay: 0.0
-epochs: 5
+epochs: 500
 warmup_epochs: 0.7
 patience_epochs: 0.3
 load_model: None
@@ -39,6 +39,7 @@ model:
   max_atom_type: 100
   max_chirality_type: 5
   max_num_neighbors: 32
+  pbc: True
 
 dataset:
   batch_size: 256

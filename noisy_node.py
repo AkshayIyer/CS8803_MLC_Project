@@ -68,7 +68,7 @@ class Trainer(object):
 
     def loss_fn(self, model, data):
         data = data.to(self.device)
-        pred_y, pred_noise = model(data.x, data.pos, data.batch)
+        pred_y, pred_noise = model(data.x, data.pos, data.batch, data)
 
         loss_y = F.mse_loss(pred_y, data.y)
         loss_noise = F.mse_loss(pred_noise, data.noise, reduction='sum')
@@ -139,7 +139,7 @@ class Trainer(object):
 
             # validate the model 
             valid_loss, valid_loss_y, valid_loss_noise = self._validate(model, valid_loader)
-            log_str = 'Epoch: {:04d}, Train loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f} || Valid loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.5f}'.format(
+            log_str = 'Epoch: {:04d}, Train loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.3f} || Valid loss: {:.5f}, Loss y: {:.5f}, Loss noise: {:.3f}'.format(
                         epoch_counter, train_loss, train_loss_y, train_loss_noise, valid_loss, valid_loss_y, valid_loss_noise
                     )
             print(log_str)
