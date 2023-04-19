@@ -79,7 +79,7 @@ class DataWrapper(object):
         )
         dataloader = PyGDataLoader(
             dataset, batch_size=self.batch_size, num_workers=self.num_workers,
-            shuffle=False, drop_last=True, pin_memory=True, persistent_workers=(self.num_workers > 0)
+            shuffle=False, drop_last=True, pin_memory=True,
         )
 
         gc.collect()

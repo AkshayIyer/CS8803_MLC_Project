@@ -1,4 +1,4 @@
-gpu: 'cuda:0'
+gpu: 'cuda:2'
 lr: 2e-4
 min_lr: 1e-7
 weight_decay: 0.0
@@ -42,7 +42,7 @@ model:
   pbc: True
 
 dataset:
-  batch_size: 256
+  batch_size: 128
   num_workers: 8
   std: 0.2
   paths: {
