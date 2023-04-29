@@ -165,12 +165,17 @@ if __name__ == "__main__":
     # num_heads = [2, 4, 6, 8, 10]
     # cutoff_upper = [4, 6, 8, 10, 12, 16]
 
+    num_gc_layers = [4, 6, 8, 16, 32]
+
     config['save_files'] = True
 
-    print(config)
+    for num_gc_layer in num_gc_layers:
+        config['model']['num_gc_layers'] = num_gc_layer
 
-    gc.collect()
-    torch.cuda.empty_cache()
+        print(config)
 
-    trainer = Trainer(config)
-    trainer.train()
+        gc.collect()
+        torch.cuda.empty_cache()
+
+        trainer = Trainer(config)
+        trainer.train()

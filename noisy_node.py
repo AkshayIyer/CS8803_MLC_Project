@@ -200,21 +200,33 @@ class Trainer(object):
 if __name__ == "__main__":
     config = yaml.load(open("configs/nn_config.yml", "r"), Loader=yaml.FullLoader)
 
-    num_layers = [4, 6, 8, 10, 12]
+    # num_layers = [4, 6, 8, 10, 12]
     # num_heads = [2, 4, 6, 8, 10]
-    cutoff_upper = [4, 6, 8, 10, 12, 16]
+    # cutoff_upper = [4, 6, 8, 10, 12, 16]
 
-    # config['save_files'] = False
+    config['save_files'] = False
+    # config['model']['num_layers'] = n_layer
+    # config['model']['cutoff_upper'] = r
 
-    for n_layer in num_layers:
-        for r in cutoff_upper:
-            config['model']['num_layers'] = n_layer
-            config['model']['cutoff_upper'] = r
+    print(config)
 
-            print(config)
+    input()
 
-            gc.collect()
-            torch.cuda.empty_cache()
+    gc.collect()
+    torch.cuda.empty_cache()
 
-            trainer = Trainer(config)
-            trainer.train()
+    trainer = Trainer(config)
+    trainer.train()
+
+    # for n_layer in num_layers:
+    #     for r in cutoff_upper:
+    #         config['model']['num_layers'] = n_layer
+    #         config['model']['cutoff_upper'] = r
+
+    #         print(config)
+
+    #         gc.collect()
+    #         torch.cuda.empty_cache()
+
+    #         trainer = Trainer(config)
+    #         trainer.train()
